@@ -1,8 +1,10 @@
 // ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, library_private_types_in_public_api
 
+import 'package:clima/screens/city_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:clima/utilities/constants.dart';
 import 'package:clima/services/weather.dart';
+import 'package:rflutter_alert/rflutter_alert.dart';
 
 class LocationScreen extends StatefulWidget {
   final locationWeather;
@@ -27,13 +29,32 @@ class _LocationScreenState extends State<LocationScreen> {
 
   void updateUI(dynamic weatherData) {
     setState(() {
-      double temp = weatherData['main']['temp'];
-      temperature = temp.toInt();
-      var condition = weatherData['weather'][0]['id'];
-      weatherIcon = weather.getWeatherIcon(condition);
-      cityName = weatherData['name'];
+      if (weatherData == null) {
+        Alert(
+          context: context,
+          type: AlertType.error,
+          title: "NETWORK ERROR",
+          desc: "Unable to Fetch Weather Data",
+          buttons: [
+            DialogButton(
+              onPressed: () => Navigator.pop(context),
+              width: 120,
+              child: Text(
+                "Cancel",
+                style: TextStyle(color: Colors.white, fontSize: 20),
+              ),
+            )
+          ],
+        ).show();
+      } else {
+        double temp = weatherData['main']['temp'];
+        temperature = temp.toInt();
+        var condition = weatherData['weather'][0]['id'];
+        weatherIcon = weather.getWeatherIcon(condition);
+        cityName = weatherData['name'];
 
-      weatherMessage = weather.getMessage(temperature);
+        weatherMessage = weather.getMessage(temperature);
+      }
     });
   }
 
@@ -59,14 +80,28 @@ class _LocationScreenState extends State<LocationScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () async {
+                      var weatherData = await weather.getLocationWeather();
+                      updateUI(weatherData);
+                    },
                     child: Icon(
                       Icons.near_me,
                       size: 50.0,
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () async {
+                      var typedName = await Navigator.push(context, MaterialPageRoute(
+                        builder: (context) {
+                          return CityScreen();
+                        },
+                      ));
+                      if(typedName != null){
+                        var weatherData = await weather.getCityWeather(typedName);
+                        updateUI(weatherData);
+                      }
+          
+                    },
                     child: Icon(
                       Icons.location_city,
                       size: 50.0,
@@ -74,27 +109,31 @@ class _LocationScreenState extends State<LocationScreen> {
                   ),
                 ],
               ),
-              Padding(
-                padding: EdgeInsets.only(left: 15.0),
-                child: Row(
-                  children: <Widget>[
-                    Text(
-                      '$temperature°',
-                      style: kTempTextStyle,
-                    ),
-                    Text(
-                      weatherIcon,
-                      style: kConditionTextStyle,
-                    ),
-                  ],
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(left: 15.0),
+                  child: Row(
+                    children: <Widget>[
+                      Text(
+                        '$temperature°',
+                        style: kTempTextStyle,
+                      ),
+                      Text(
+                        weatherIcon,
+                        style: kConditionTextStyle,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.only(right: 15.0),
-                child: Text(
-                  "$weatherMessage in $cityName!",
-                  textAlign: TextAlign.right,
-                  style: kMessageTextStyle,
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: 15.0),
+                  child: Text(
+                    "$weatherMessage in $cityName!",
+                    textAlign: TextAlign.right,
+                    style: kMessageTextStyle,
+                  ),
                 ),
               ),
             ],
